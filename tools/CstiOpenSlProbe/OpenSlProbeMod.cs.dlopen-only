@@ -1,0 +1,120 @@
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using NL = System.Runtime.InteropServices.NativeLibrary;
+using MelonLoader;
+
+[assembly: MelonInfo(typeof(CstiOpenSlProbe.OpenSlProbeMod), "CstiOpenSlProbe", "1.0.0", "dsh")]
+[assembly: MelonGame(null, null)]
+
+namespace CstiOpenSlProbe;
+
+/// <summary>
+/// 第 2 步最小探针（只 dlopen + 取符号，**不播音、不碰 Unity 音频、不改 APK**）。
+///
+/// 目的：验证"纯 mod 侧能不能直接调用 Android 系统音频库"。
+/// 若成立，就绕开整个 Unity ICall 被裁的问题，由 mod 自己放 mod 的原声。
+///
+/// 已知前置证据：
+///   · 设备 Android 14 / arm64-v8a；`/system/lib64/libOpenSLES.so`(15248B) 与 `libaaudio.so`(37056B) 都存在；
+///   · **`libunity.so` 自己的 DT_NEEDED 里就有 `libOpenSLES.so`** → 该库已在**本 app 的 linker namespace** 内，
+///     所以 mod 侧 dlopen 大概率成功（Android 14 的 namespace 隔离是这里唯一的风险点）；
+///   · 我们已有成功先例：`ResolverHook.Install()` 里 `NativeLibrary.Load("libil2cpp.so")` + `GetExport` 可用。
+/// </summary>
+public class OpenSlProbeMod : MelonMod
+{
+    private const string Pkg = "com.winterspringgames.survivaljourney";
+    private static readonly string Path_ = "/sdcard/MelonLoader/" + Pkg + "/opensl_probe.txt";
+    private static int _ran;
+
+    public static void Write(string s)
+    {
+        try { File.AppendAllText(Path_, DateTime.Now.ToString("HH:mm:ss.fff") + "  " + s + "\n"); } catch { }
+    }
+
+    public override void OnInitializeMelon()
+    {
+        try { File.WriteAllText(Path_, ""); } catch { }
+        var t = new Thread(() => { try { Thread.Sleep(8000); } catch { } Run(); })
+        { IsBackground = true, Name = "OpenSlProbe" };
+        t.Start();
+        LoggerInstance.Msg("[OPENSL] 探针已启动（8s 后跑，只 dlopen+取符号，不播音）");
+    }
+
+    public static void Run()
+    {
+        if (Interlocked.Exchange(ref _ran, 1) != 0) return;
+        Write("== OpenSL ES / AAudio 系统库可达性探针 ==");
+        Write("RuntimeInformation.OSDescription = " + RuntimeInformation.OSDescription);
+        Write("ProcessArchitecture = " + RuntimeInformation.ProcessArchitecture);
+
+        // 1) libOpenSLES.so
+        Probe("libOpenSLES.so", new[]
+        {
+            "slCreateEngine",              // OpenSL ES 入口（引擎对象工厂）
+            "slQueryNumSupportedEngineInterfaces",
+            "slQuerySupportedEngineInterfaces",
+        });
+
+        // 2) libaaudio.so（Android 8+ 的现代音频 API；OpenSL ES 在 Android 9+ 就是它的封装）
+        Probe("libaaudio.so", new[]
+        {
+            "AAudio_createStreamBuilder",
+            "AAudioStreamBuilder_openStream",
+            "AAudioStream_write",
+        });
+
+        // 3) 对照组：liblog.so / libmediandk.so（引擎也链了，用来判断"是不是只有音频库不行"）
+        Probe("liblog.so", new[] { "__android_log_write", "__android_log_print" });
+        Probe("libmediandk.so", new[] { "AMediaCodec_createDecoderByType", "AMediaExtractor_create" });
+
+        // 4) 对照组：libc（必然可用）
+        Probe("libc.so", new[] { "malloc", "dlopen" });
+
+        Write("== 探针结束 ==");
+        MelonLoader.MelonLogger.Msg("[OPENSL] 探针完成，结果见 " + Path_);
+    }
+
+    private static void Probe(string lib, string[] symbols)
+    {
+        Write("--- " + lib + " ---");
+        IntPtr h = IntPtr.Zero;
+        try
+        {
+            h = NL.Load(lib);
+            Write("  dlopen(按名) 成功: handle=0x" + h.ToInt64().ToString("X"));
+        }
+        catch (Exception e)
+        {
+            Write("  dlopen(按名) 失败: " + e.GetType().Name + " " + e.Message);
+            // 再试绝对路径（namespace 允许时也能成）
+            foreach (var abs in new[] { "/system/lib64/" + lib, "/system/lib/" + lib })
+            {
+                try
+                {
+                    h = NL.Load(abs);
+                    Write("  dlopen(绝对路径 " + abs + ") 成功: handle=0x" + h.ToInt64().ToString("X"));
+                    break;
+                }
+                catch (Exception e2) { Write("  dlopen(" + abs + ") 失败: " + e2.Message); }
+            }
+        }
+        if (h == IntPtr.Zero) { Write("  → 该库不可达"); return; }
+
+        foreach (var s in symbols)
+        {
+            try
+            {
+                var p = NL.GetExport(h, s);
+                Write("    [OK ] " + s + " = 0x" + p.ToInt64().ToString("X"));
+            }
+            catch (Exception e)
+            {
+                Write("    [MISS] " + s + " : " + e.GetType().Name + " " + e.Message);
+            }
+        }
+    }
+}
+
