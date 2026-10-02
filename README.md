@@ -58,6 +58,35 @@ dotnet build -c Release -p:ML06=<你的 ml-installer-06 目录>
 真机脚本（短轮询、不阻塞）在 loader 仓库的 `CSTI-MiniLoader/tools/`：
 `csti_run.ps1`（推送并等待关键日志）、`archdump.py`（离线解包 `.modArch_V3`，含 GameSourceModify 分析）。
 
+### 部署到设备
+
+```powershell
+adb push <产物>.dll /sdcard/MelonLoader/com.winterspringgames.survivaljourney/Mods/
+adb shell am force-stop com.winterspringgames.survivaljourney
+adb shell am start -n com.winterspringgames.survivaljourney/com.x.shell.JPolicyActivity
+# 日志：/sdcard/MelonLoader/<包名>/MelonLoader/Latest.log
+```
+
+**只推单个 DLL**，不要整目录推送（`bin\Release\` 下是引用拷贝，会污染 `Mods\`）。
+
+## 依赖版本
+
+| 项 | 版本 |
+|---|---|
+| MelonLoader | **0.6.5**（.NET 8） |
+| 目标框架 | `net8.0` |
+| Il2CppInterop | 0.6 自带运行时 + Windows 侧生成代理程序集（生成器修复见 `Il2CppInterop@csti-fixes`） |
+| 游戏 | Android arm64，包名 `com.winterspringgames.survivaljourney`（数据裁剪、`libunity.so` 已 strip） |
+
+## 已知限制
+
+- 所有清单/结论都是**按本机这一个 APK 版本**实测的（ICall 缺失 234 条等）；换版本需重扫。
+- `docs/flow/_dumps/`（类型清单快照 2.8 MB）与 `HarmonyProbe/results/`（123 MB 真机证据）**未收录**，脚本可重生。
+- 文档里保留了一些**反面结论**（dead-end，例如音频在裁剪构建上的可行路径限制），用于避免重复踩坑，
+  不代表问题已解决。
+- 探针工程需要在**真机**上运行（PC 侧只能做离线 ELF/元数据扫描）。
+- 本仓库**不含**游戏本体、APK、签名密钥或任何上游二进制。
+
 ## 相关仓库（同一套移植工程）
 
 | 仓库 | 内容 |
