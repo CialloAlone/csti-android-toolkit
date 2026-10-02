@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    HarmonyProbe —— CSTI (com.winterspringgames.survivaljourney) Harmony 挂载崩溃根因探针
+    构建：dotnet build -c Release -p:ML06=D:\RiderProjects\ml-installer-06
+    产物：bin\Release\HarmonyProbe.dll
+    行为由 Mods 目录下的 HarmonyProbe.cfg 决定（无需重新编译即可切换实验）。
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>HarmonyProbe</AssemblyName>
+    <RootNamespace>HarmonyProbe</RootNamespace>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <NoWarn>CS0618;CS8632;CS0162;CS0168;CS0219;CS0649;CS0108;CS0114</NoWarn>
+  </PropertyGroup>
+
+  <!-- -p:ProbeNothing=1 → OnInitializeMelon 立刻 return（零文件 I/O、零日志、零类型查找） -->
+  <PropertyGroup Condition="'$(ProbeNothing)' == '1'">
+    <DefineConstants>$(DefineConstants);PROBE_NOTHING</DefineConstants>
+  </PropertyGroup>
+
+  <!-- -p:ProbeNoFileIO=1 → 只走 MelonLogger，绝不写自己的日志文件 -->
+  <PropertyGroup Condition="'$(ProbeNoFileIO)' == '1'">
+    <DefineConstants>$(DefineConstants);PROBE_NOFILEIO</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader">
+      <HintPath>$(ML06)\mldata\MelonLoader\net8\MelonLoader.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(ML06)\mldata\MelonLoader\net8\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(ML06)\mldata\MelonLoader\net8\Il2CppInterop.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 游戏代理程序集（Il2CppInterop 生成） -->
+  <ItemGroup>
+    <Reference Include="$(ML06)\interop_out\*.dll">
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

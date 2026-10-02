@@ -1,0 +1,16 @@
+bin/
+obj/
+userlibs/
+results/
+*.dll
+*.so
+*.pdb
+*.exe
+*.log
+*.apk
+*.pem
+*.jks
+.vs/
+.idea/
+_dumps/
+

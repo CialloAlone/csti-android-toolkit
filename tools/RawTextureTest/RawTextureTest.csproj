@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RawTextureTest</AssemblyName>
+    <RootNamespace>RawTextureTest</RootNamespace>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>CS0618</NoWarn>
+    <!-- 禁止误引用托管 Texture2D 之外的分析噪音；编译警告不隐藏，便于发现真问题 -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- pc-verify 是 PC 侧独立验证工程（跑 PNG 自解码器），不能编进 mod 本体 -->
+    <Compile Remove="pc-verify\**" />
+    <None Remove="pc-verify\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="MelonLoader"><HintPath>$(ML06)\mldata\MelonLoader\net8\MelonLoader.dll</HintPath></Reference>
+    <Reference Include="0Harmony"><HintPath>$(ML06)\mldata\MelonLoader\net8\0Harmony.dll</HintPath></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(ML06)\mldata\MelonLoader\net8\Il2CppInterop.Runtime.dll</HintPath></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(ML06)\interop_out\Il2Cppmscorlib.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ML06)\interop_out\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ML06)\interop_out\UnityEngine.ImageConversionModule.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

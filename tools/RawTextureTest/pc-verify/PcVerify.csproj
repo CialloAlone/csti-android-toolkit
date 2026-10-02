@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>PcVerify</AssemblyName>
+    <RootNamespace>PcVerify</RootNamespace>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 直接引用已构建的 mod 程序集，验证其中的 PNG 自解码器（TryDecodeImage 是纯托管代码，不碰 IL2CPP） -->
+    <Reference Include="RawTextureTest"><HintPath>..\bin\Release\RawTextureTest.dll</HintPath></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>..\bin\Release\Il2CppInterop.Runtime.dll</HintPath></Reference>
+    <Reference Include="MelonLoader"><HintPath>..\bin\Release\MelonLoader.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>
